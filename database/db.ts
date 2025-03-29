@@ -56,7 +56,20 @@ export async function initializeDatabase() {
         text TEXT NOT NULL,
         timestamp INTEGER NOT NULL,
         edited_at INTEGER,
+        status TEXT DEFAULT 'sent' NOT NULL,
         FOREIGN KEY (chat_id) REFERENCES chats (id)
+      );
+    `);
+    
+    console.log('Creating message_read_receipts table...');
+    await sqlite.execAsync(`
+      CREATE TABLE IF NOT EXISTS message_read_receipts (
+        id TEXT PRIMARY KEY,
+        message_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        read_at INTEGER NOT NULL,
+        FOREIGN KEY (message_id) REFERENCES messages (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
       );
     `);
     
@@ -174,9 +187,100 @@ export async function editMessage(messageId: string, newText: string) {
   }
 }
 
+// Función para marcar un mensaje como leído
+export async function markMessageAsRead(messageId: string, userId: string) {
+  try {
+    console.log('Marking message as read:', { messageId, userId });
+
+    // Primero actualizamos el estado del mensaje a 'read'
+    const updateQuery = `
+      UPDATE messages
+      SET status = 'read'
+      WHERE id = ?
+    `;
+
+    const updateStmt = await sqlite.prepareAsync(updateQuery);
+    await updateStmt.executeAsync([messageId]);
+    await updateStmt.finalizeAsync();
+
+    // Luego registramos la confirmación de lectura
+    const insertQuery = `
+      INSERT OR REPLACE INTO message_read_receipts (id, message_id, user_id, read_at)
+      VALUES (?, ?, ?, ?)
+    `;
+
+    const receiptId = `${messageId}_${userId}`;
+    const insertStmt = await sqlite.prepareAsync(insertQuery);
+    await insertStmt.executeAsync([receiptId, messageId, userId, Date.now()]);
+    await insertStmt.finalizeAsync();
+
+    console.log('Message marked as read successfully!');
+  } catch (error) {
+    console.error('Error marking message as read:', error);
+    throw error;
+  }
+}
+
+// Función para obtener el estado de lectura de los mensajes
+export async function getMessageReadStatus(messageIds: string[]) {
+  try {
+    if (!messageIds.length) return [];
+
+    const placeholders = messageIds.map(() => '?').join(',');
+    const query = `
+      SELECT 
+        m.id AS message_id,
+        m.status,
+        JSON_GROUP_ARRAY(
+          JSON_OBJECT(
+            'user_id', mrr.user_id,
+            'read_at', mrr.read_at
+          )
+        ) AS read_receipts
+      FROM messages m
+      LEFT JOIN message_read_receipts mrr ON m.id = mrr.message_id
+      WHERE m.id IN (${placeholders})
+      GROUP BY m.id
+    `;
+
+    const stmt = await sqlite.prepareAsync(query);
+    const statement = await stmt.executeAsync(messageIds);
+    const results = await statement.getAllAsync();
+    
+    await stmt.finalizeAsync();
+    return results;
+  } catch (error) {
+    console.error('Error getting message read status:', error);
+    throw error;
+  }
+}
+
+// Función para actualizar el estado de un mensaje
+export async function updateMessageStatus(messageId: string, status: 'sent' | 'delivered' | 'read') {
+  try {
+    console.log('Updating message status:', { messageId, status });
+
+    const query = `
+      UPDATE messages
+      SET status = ?
+      WHERE id = ?
+    `;
+
+    const stmt = await sqlite.prepareAsync(query);
+    await stmt.executeAsync([status, messageId]);
+    await stmt.finalizeAsync();
+
+    console.log('Message status updated successfully!');
+  } catch (error) {
+    console.error('Error updating message status:', error);
+    throw error;
+  }
+}
+
 export async function dropTables() {
   try {
     console.log('Dropping existing tables...');
+    await sqlite.execAsync(`DROP TABLE IF EXISTS message_read_receipts;`);
     await sqlite.execAsync(`DROP TABLE IF EXISTS message_reactions;`);
     await sqlite.execAsync(`DROP TABLE IF EXISTS deleted_messages;`);
     await sqlite.execAsync(`DROP TABLE IF EXISTS chat_participants_history;`);

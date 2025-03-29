@@ -8,7 +8,18 @@ import { ChatRoomTemplate } from '@/design_system/components/templates';
 
 export default function ChatRoomScreen() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
-  const { currentUser, users, chats, sendMessage, deleteMessage, addReaction, removeReaction, editMessage } = useAppContext();
+  const { 
+    currentUser, 
+    users, 
+    chats, 
+    sendMessage, 
+    deleteMessage, 
+    addReaction, 
+    removeReaction, 
+    editMessage,
+    markMessageAsRead,
+    updateMessageStatus
+  } = useAppContext();
   const [messageText, setMessageText] = useState('');
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -37,6 +48,36 @@ export default function ChatRoomScreen() {
       setMessageText('');
     }
   };
+
+  // Marcar mensajes como leídos cuando se visualizan
+  useEffect(() => {
+    if (chat?.messages && currentUser) {
+      // Marcar como leídos los mensajes que no son del usuario actual
+      const unreadMessages = chat.messages.filter(
+        msg => msg.senderId !== currentUser.id && 
+              (msg.status !== 'read' || 
+               !msg.readReceipts?.some(receipt => receipt.userId === currentUser.id))
+      );
+      
+      unreadMessages.forEach(msg => {
+        markMessageAsRead?.(msg.id);
+      });
+    }
+  }, [chat?.messages, currentUser, markMessageAsRead]);
+
+  // Actualizar estado de mensajes enviados a 'delivered' cuando se cargan
+  useEffect(() => {
+    if (chat?.messages && currentUser) {
+      // Actualizar estado de mensajes enviados por el usuario actual
+      const sentMessages = chat.messages.filter(
+        msg => msg.senderId === currentUser.id && msg.status === 'sent'
+      );
+      
+      sentMessages.forEach(msg => {
+        updateMessageStatus?.(msg.id, 'delivered');
+      });
+    }
+  }, [chat?.messages, currentUser, updateMessageStatus]);
 
   const handleEditMessage = (messageId: string, currentText: string) => {
     setEditingMessageId(messageId);

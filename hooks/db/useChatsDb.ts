@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '@/database/db';
-import { chats, chatParticipants, messages, chatParticipantsHistory, deletedMessages, messageReactions } from '@/database/schema';
+import { chats, chatParticipants, messages, chatParticipantsHistory, deletedMessages, messageReactions, messageReadReceipts } from '@/database/schema';
 import { eq, and, or } from 'drizzle-orm';
 import { MessageReaction, Message, Chat } from '@/types/Chat';
 
@@ -79,6 +79,16 @@ export function useChatsDb(currentUserId: string | null) {
               )
             );
 
+          // Get read receipts for all messages
+          const readReceiptsData = await db
+            .select()
+            .from(messageReadReceipts)
+            .where(
+              or(
+                ...messagesData.map(m => eq(messageReadReceipts.messageId, m.id))
+              )
+            );
+
           // Group reactions by message
           const messageReactionsMap = reactionsData.reduce((acc, reaction) => {
             if (!acc[reaction.messageId]) {
@@ -93,6 +103,18 @@ export function useChatsDb(currentUserId: string | null) {
             return acc;
           }, {} as Record<string, MessageReaction[]>);
 
+          // Group read receipts by message
+          const messageReadReceiptsMap = readReceiptsData.reduce((acc, receipt) => {
+            if (!acc[receipt.messageId]) {
+              acc[receipt.messageId] = [];
+            }
+            acc[receipt.messageId].push({
+              userId: receipt.userId,
+              readAt: receipt.readAt,
+            });
+            return acc;
+          }, {} as Record<string, { userId: string, readAt: number }[]>);
+
           const chatMessages = messagesData
             .filter(m => !deletedMessageIds.has(m.id))
             .map(m => ({
@@ -100,7 +122,9 @@ export function useChatsDb(currentUserId: string | null) {
               senderId: m.senderId,
               text: m.text,
               timestamp: m.timestamp,
+              status: m.status,
               reactions: messageReactionsMap[m.id] || [],
+              readReceipts: messageReadReceiptsMap[m.id] || [],
             }));
 
           const lastMessage = chatMessages.length > 0 ? chatMessages[chatMessages.length - 1] : undefined;
@@ -108,8 +132,8 @@ export function useChatsDb(currentUserId: string | null) {
           loadedChats.push({
             id: chatId,
             participants: participantIds,
-            messages: chatMessages,
-            lastMessage,
+            messages: chatMessages as Message[],
+            lastMessage: lastMessage as Message | undefined,
           });
         }
 
@@ -169,14 +193,17 @@ export function useChatsDb(currentUserId: string | null) {
         senderId,
         text,
         timestamp,
+        status: 'sent',
       });
 
       const newMessage: Message = {
         reactions: [],
+        readReceipts: [],
         id: messageId,
         senderId,
         text,
         timestamp,
+        status: 'sent',
       };
 
       setUserChats(prevChats =>
@@ -415,6 +442,79 @@ export function useChatsDb(currentUserId: string | null) {
     }
   }, [currentUserId]);
 
+  // Add markMessageAsRead function
+  const markMessageAsRead = useCallback(async (messageId: string) => {
+    if (!currentUserId) return false;
+
+    try {
+      const receiptId = `read-${messageId}-${currentUserId}-${Date.now()}`;
+      const readAt = Date.now();
+
+      // Update message status to 'read'
+      await db.update(messages)
+        .set({ status: 'read' })
+        .where(eq(messages.id, messageId));
+
+      // Add read receipt
+      await db.insert(messageReadReceipts).values({
+        id: receiptId,
+        messageId,
+        userId: currentUserId,
+        readAt,
+      });
+
+      // Update local state
+      setUserChats(prevChats =>
+        prevChats.map(chat => ({
+          ...chat,
+          messages: chat.messages.map(msg =>
+            msg.id === messageId
+              ? {
+                  ...msg,
+                  status: 'read',
+                  readReceipts: [
+                    ...msg.readReceipts || [],
+                    { userId: currentUserId, readAt }
+                  ],
+                }
+              : msg
+          ),
+        }))
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      return false;
+    }
+  }, [currentUserId]);
+
+  // Add updateMessageStatus function
+  const updateMessageStatus = useCallback(async (messageId: string, status: 'sent' | 'delivered' | 'read') => {
+    try {
+      await db.update(messages)
+        .set({ status })
+        .where(eq(messages.id, messageId));
+
+      // Update local state
+      setUserChats(prevChats =>
+        prevChats.map(chat => ({
+          ...chat,
+          messages: chat.messages.map(msg =>
+            msg.id === messageId
+              ? { ...msg, status }
+              : msg
+          ),
+        }))
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Error updating message status:', error);
+      return false;
+    }
+  }, []);
+
   return {
     chats: userChats,
     createChat,
@@ -425,6 +525,8 @@ export function useChatsDb(currentUserId: string | null) {
     addReaction,
     removeReaction,
     editMessage,  // Return editMessage function
+    markMessageAsRead,
+    updateMessageStatus,
     loading,
   };
 }

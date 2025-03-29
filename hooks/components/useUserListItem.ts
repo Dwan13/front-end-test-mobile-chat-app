@@ -1,4 +1,4 @@
-import { User } from '@/hooks/useUser';
+import { User } from "@/types/User";
 
 interface UseUserListItemProps {
   user: User;

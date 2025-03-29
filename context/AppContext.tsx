@@ -23,6 +23,8 @@ type AppContextType = {
   addReaction?: (messageId: string, emoji: string) => Promise<boolean>;
   removeReaction?: (reactionId: string, messageId: string) => Promise<boolean>;
   editMessage?: (messageId: string, newText: string) => Promise<boolean>;
+  markMessageAsRead?: (messageId: string) => Promise<boolean>;
+  updateMessageStatus?: (messageId: string, status: 'sent' | 'delivered' | 'read') => Promise<boolean>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -44,6 +46,8 @@ function AppContent({ children }: { children: ReactNode }) {
     addReaction: chatContext.addReaction || undefined,
     removeReaction: chatContext.removeReaction || undefined,
     editMessage: chatContext.editMessage || undefined,
+    markMessageAsRead: chatContext.markMessageAsRead || undefined,
+    updateMessageStatus: chatContext.updateMessageStatus || undefined,
   };
 
   if (!isInitialized) {

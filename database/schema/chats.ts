@@ -17,6 +17,7 @@ export const messages = sqliteTable("messages", {
   text: text("text").notNull(),
   timestamp: integer("timestamp").notNull(),
   editedAt: integer("edited_at"),
+  status: text("status").notNull().default("sent"),
 });
 
 export const chatParticipantsHistory = sqliteTable("chat_participants_history", {
@@ -40,4 +41,11 @@ export const messageReactions = sqliteTable("message_reactions", {
   userId: text("user_id").notNull(),
   emoji: text("emoji").notNull(),
   createdAt: integer("created_at").notNull(),
+});
+
+export const messageReadReceipts = sqliteTable("message_read_receipts", {
+  id: text("id").primaryKey(),
+  messageId: text("message_id").notNull(),
+  userId: text("user_id").notNull(),
+  readAt: integer("read_at").notNull(),
 });

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, TouchableWithoutFeedback, Modal } from 'react-native';
+import { View, TouchableWithoutFeedback, Modal, ViewStyle, TextStyle } from 'react-native';
 import { ThemedText } from '@/design_system/components/atoms/ThemedText';
 import { styles as createStyles } from './MessageBubble.styles';
 import { useMessageBubble } from '@/hooks/components/useMessageBubble';
@@ -7,6 +7,7 @@ import { OptionsMenu } from '@/design_system/components/organisms/OptionsMenu';
 import EmojiSelector, { Categories } from 'react-native-emoji-selector';
 import { useTheme } from '@/context/ThemeContext';
 import { Message } from '@/types/Chat';
+import { IconSymbol } from '@/design_system/ui/vendors';
 
 interface MessageBubbleProps {
   message: Message;
@@ -62,6 +63,37 @@ export function MessageBubble({
     });
   };
 
+  // Función para renderizar el indicador de estado del mensaje
+  const renderMessageStatus = () => {
+    if (!isCurrentUser) return null;
+    
+    let iconName = "checkmark";
+    let iconColor = "#8E8E93";
+    
+    switch (message.status) {
+      case 'sent':
+        iconName = "checkmark";
+        iconColor = "#8E8E93";
+        break;
+      case 'delivered':
+        iconName = "checkmark.circle";
+        iconColor = "#8E8E93";
+        break;
+      case 'read':
+        iconName = "checkmark.circle.fill";
+        iconColor = "#007AFF";
+        break;
+      default:
+        break;
+    }
+    
+    return (
+      <View style={styles.statusIndicator}>
+        <IconSymbol name={'checkmark' as const} size={12} color={iconColor} />
+      </View>
+    );
+  };
+
   return (
     <>
       <TouchableWithoutFeedback onLongPress={handleLongPress}>
@@ -79,14 +111,18 @@ export function MessageBubble({
             <ThemedText style={[styles.messageText, isCurrentUser && !isDark && styles.selfMessageText]}>
               {message.text}
             </ThemedText>
-            <View style={styles.timeContainer}>
+            <View style={styles.timeContainer as ViewStyle}>
               <ThemedText style={styles.timeText}>
                 {formatTime(message.timestamp)}
               </ThemedText>
+              {renderMessageStatus()}
             </View>
+            {message.editedAt && (
+              <ThemedText style={styles.editedText as TextStyle}>Edited</ThemedText>
+            )}
             {message.reactions && message.reactions.length > 0 && (
               <View style={[
-                styles.reactionsContainer,
+                styles.reactionsContainer as ViewStyle,
                 isCurrentUser ? styles.reactionsRight : styles.reactionsLeft
               ]}>
                 {message.reactions.map((reaction) => (
@@ -111,7 +147,7 @@ export function MessageBubble({
         onEdit={() => onEditMessage?.(message.id, message.text)}
         onDelete={() => onDeleteMessage?.(message.id)}
         onAddEmoji={() => setShowEmojiSelector(true)}
-        position={{ top: bubblePosition.y, left: bubblePosition.x, width: bubblePosition.width }} // Pass position as a prop
+        position={{ top: bubblePosition.y, left: bubblePosition.x, width: bubblePosition.width }}
       />
 
       <Modal
@@ -121,9 +157,9 @@ export function MessageBubble({
         onRequestClose={() => setShowEmojiSelector(false)}
       >
         <TouchableWithoutFeedback onPress={() => setShowEmojiSelector(false)}>
-          <View style={styles.modalOverlay}>
+          <View style={styles.modalOverlay as ViewStyle}>
             <View style={styles.emojiSelectorContainer}>
-              <View style={styles.emojiSelectorHeader}>
+              <View style={styles.emojiSelectorHeader as ViewStyle}>
                 <ThemedText darkColor='#000000'>Select Reaction</ThemedText>
               </View>
               <View style={{ height: 300 }}>

@@ -1,6 +1,6 @@
-import { User } from '@/hooks/useUser';
 import { getAvatarStyles } from '@/design_system/components/organisms/Avatar/Avatar.styles';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { User } from '@/types/User';
 
 const getAvatarColor = (identifier?: string): string => {
   const theme = useColorScheme() ?? 'light';

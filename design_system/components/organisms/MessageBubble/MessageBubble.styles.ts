@@ -1,4 +1,3 @@
-import { StyleSheet } from 'react-native';
 import { spacing, themes, typography, radius, colors } from '@/design_system/ui/tokens';
 import { Theme } from '@/types/tColores';
 
@@ -8,7 +7,7 @@ export const getBubbleColors = (isDark: boolean, isCurrentUser: boolean) => ({
     : isDark ? colors.neutral[700] : colors.neutral[300] ,
 });
 
-export const styles = (theme: Theme) => StyleSheet.create({
+export const styles = (theme:Theme) => ({
   container: {
     marginVertical: spacing.xs,
     maxWidth: '80%',
@@ -76,8 +75,21 @@ export const styles = (theme: Theme) => StyleSheet.create({
   },
   timeContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'flex-end',
-    marginTop: spacing.xxs,
+    marginTop: 4,
+  },
+  
+  statusIndicator: {
+    marginLeft: 4,
+  },
+  
+  editedText: {
+    fontSize: 10,
+    fontStyle: 'italic',
+    opacity: 0.7,
+    alignSelf: 'flex-end',
+    marginTop: 2,
   },
   timeText: {
     fontSize: typography.sizes.xs,

@@ -5,6 +5,11 @@ export interface MessageReaction {
   createdAt: number;
 }
 
+export interface MessageReadReceipt {
+  userId: string;
+  readAt: number;
+}
+
 export interface Message {
   id: string;
   senderId: string;
@@ -12,6 +17,8 @@ export interface Message {
   timestamp: number;
   reactions: MessageReaction[];
   editedAt?: number;
+  status?: 'sent' | 'delivered' | 'read';
+  readReceipts?: MessageReadReceipt[];
 }
 
 export interface Chat {
