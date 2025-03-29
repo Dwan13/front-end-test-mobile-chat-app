@@ -29,7 +29,7 @@ export const styles = StyleSheet.create({
     marginTop: spacing.lg,
     padding: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: Colors.light.tint,
+    backgroundColor: Colors.tint,
   },
   clearButtonText: {
     color: colors.text.inverse,

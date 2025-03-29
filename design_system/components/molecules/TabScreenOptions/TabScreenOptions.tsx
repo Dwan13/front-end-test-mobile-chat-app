@@ -9,7 +9,7 @@ interface TabScreenOptionsProps {
 }
 
 export const getTabScreenOptions = ({ colorScheme, isLoading }: TabScreenOptionsProps) => ({
-  tabBarActiveTintColor: colors[colorScheme].tint,
+  tabBarActiveTintColor: colors.tint,
   headerShown: false,
   tabBarButton: HapticTab,
   tabBarBackground: TabBarBackground,

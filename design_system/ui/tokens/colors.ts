@@ -1,7 +1,6 @@
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
-export const colors = {
+const baseColors = {
   primary: {
     50: '#E3F2FD',
     100: '#BBDEFB',
@@ -45,31 +44,12 @@ export const colors = {
     primary: '#212121',
     secondary: '#757575',
     disabled: '#9E9E9E',
-    inverse: '#FFFFFF',
     black: '#000000',
   },
   background: {
-    default: '#000000',
     paper: '#F5F5F5',
     elevated: '#FFFFFF',
     black: '#000000',
-  },
-
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
   },
   overlay: {
     light: 'rgba(0, 0, 0, 0.5)',
@@ -79,3 +59,43 @@ export const colors = {
     default: '#E0E0E0',
   },
 };
+
+// Paletas de colores temáticos
+const themeColors = {
+  light: {
+    textInverse: '#000000',
+    backgroundDefault: '#FFFFFF',
+    tint: '#0a7ea4',
+    icon: '#687076',
+    tabIconDefault: '#687076',
+    tabIconSelected: '#0a7ea4',
+  },
+  dark: {
+    textInverse: '#FFFFFF',
+    backgroundDefault: '#151718',
+    tint: '#fff',
+    icon: '#9BA1A6',
+    tabIconDefault: '#9BA1A6',
+    tabIconSelected: '#fff',
+  },
+} as const;
+
+// Hook que devuelve los colores del tema actual
+export const getColors = () => {
+  const theme = useColorScheme() ?? 'light';
+
+  return {
+    ...baseColors,
+    text: {
+      ...baseColors.text,
+      inverse: themeColors[theme].textInverse, // Asigna solo el valor correcto
+    },
+    background: {
+      ...baseColors.background,
+      default: themeColors[theme].backgroundDefault,
+    },
+    ...themeColors[theme],
+  };
+};
+
+export const colors = getColors();

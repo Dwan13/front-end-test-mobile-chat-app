@@ -8,6 +8,9 @@ export const styles = StyleSheet.create({
         lineHeight: typography.lineHeights.normal,
         fontWeight: typography.weights.regular,
     },
+    colorTheme:{
+        color: colors.text.inverse
+    },
     defaultSemiBold: {
         fontSize: typography.sizes.md,
         lineHeight: typography.lineHeights.normal,

@@ -22,7 +22,7 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <ThemedView style={styles.container}>
-      <IconSymbol size={64} name={icon} color={color || Colors.light.tint} />
+      <IconSymbol size={64} name={icon} color={color || Colors.tint} />
       <ThemedText style={styles.title}>{title}</ThemedText>
       <ThemedText style={styles.message}>{message}</ThemedText>
       
