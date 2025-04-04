@@ -7,3 +7,4 @@ export { SearchResults } from './SearchResults';
 export { UserList } from './UserList';
 export { ChatsList } from './ChatsList';
 export { NewChatModal } from './NewChatModal';
+export { ChatSelector } from './ChatSelector';

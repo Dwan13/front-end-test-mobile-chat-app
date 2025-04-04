@@ -18,7 +18,17 @@ type AppContextType = {
   /** List of chats for the current user */
   chats: Chat[];
   createChat: (participantIds: string[]) => Promise<Chat | null>;
-  sendMessage: (chatId: string, text: string, senderId: string, imageUri?: string) => Promise<boolean>;
+  sendMessage: (
+    chatId: string, 
+    text: string, 
+    senderId: string, 
+    imageUri?: string,
+    forwardedFrom?: {
+      userId: string;
+      userName: string;
+      originalTimestamp: number;
+    }
+  ) => Promise<boolean>;
   loading: boolean;
   dbInitialized: boolean;
   clearChats: (userId: string) => Promise<void>;
@@ -27,6 +37,8 @@ type AppContextType = {
   addReaction?: (messageId: string, emoji: string) => Promise<boolean>;
   removeReaction?: (reactionId: string, messageId: string) => Promise<boolean>;
   editMessage?: (messageId: string, newText: string) => Promise<boolean>;
+  markMessagesAsRead?: (chatId: string, userId: string) => Promise<boolean>;
+  forwardMessage?: (messageId: string, targetChatId: string, senderId: string) => Promise<boolean>;
 };
 
 /**
@@ -55,9 +67,21 @@ function AppContent({ children }: { children: ReactNode }) {
     addReaction: chatContext.addReaction || undefined,
     removeReaction: chatContext.removeReaction || undefined,
     editMessage: chatContext.editMessage || undefined,
-    sendMessage: async (chatId: string, text: string, senderId: string, imageUri?: string) => {
+    markMessagesAsRead: chatContext.markMessagesAsRead || undefined,
+    forwardMessage: chatContext.forwardMessage || undefined,
+    sendMessage: async (
+      chatId: string, 
+      text: string, 
+      senderId: string, 
+      imageUri?: string,
+      forwardedFrom?: {
+        userId: string;
+        userName: string;
+        originalTimestamp: number;
+      }
+    ) => {
       if (!chatContext.sendMessage) return false;
-      return chatContext.sendMessage(chatId, text, senderId, imageUri);
+      return chatContext.sendMessage(chatId, text, senderId, imageUri, forwardedFrom);
     },
   };
 

@@ -10,6 +10,7 @@ interface UseMessageBubbleProps {
   onEditMessage?: (messageId: string, currentText: string) => void;
   onAddReaction?: (messageId: string, emoji: string) => void;
   onRemoveReaction?: (reactionId: string, messageId: string) => void;
+  onForwardMessage?: (messageId: string, targetChatId: string) => void;
   userId?: string;
 }
 
@@ -27,10 +28,12 @@ export function useMessageBubble({
   isCurrentUser,
   userId,
   onAddReaction,
-  onRemoveReaction 
+  onRemoveReaction,
+  onForwardMessage
 }: UseMessageBubbleProps) {
   const [showEmojiSelector, setShowEmojiSelector] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [showChatSelector, setShowChatSelector] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const bubbleColors = getBubbleColors(isDark, isCurrentUser);
@@ -66,6 +69,19 @@ export function useMessageBubble({
     setShowEmojiSelector(false);
   };
 
+  const handleForward = async (targetChatId: string) => {
+    try {
+      if (onForwardMessage) {
+        await onForwardMessage(message.id, targetChatId);
+        setShowChatSelector(false);
+        // Optionally add success feedback here
+      }
+    } catch (error) {
+      console.error('Error forwarding message:', error);
+      // TODO: Add error handling or user feedback
+    }
+  };
+
   /**
    * Handles removal of a reaction
    * @param reactionId - ID of the reaction to remove
@@ -82,6 +98,9 @@ export function useMessageBubble({
     setShowEmojiSelector,
     handleEmojiSelected,
     handleRemoveReaction,
+    handleForward,
+    showChatSelector,
+    setShowChatSelector,
     showOptionsMenu,
     setShowOptionsMenu
   };

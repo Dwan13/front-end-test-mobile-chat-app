@@ -40,6 +40,19 @@ export interface Message {
   duration?: number;
   /** Size of the multimedia content in bytes */
   size?: number;
+  /** Indicates if the message has been read by the recipient */
+  isRead: boolean;
+  /** Timestamp when the message was read by the recipient */
+  readAt?: number;
+  /** Information about forwarded message */
+  forwardedFrom?: {
+    /** ID of the original sender */
+    userId: string;
+    /** Name of the original sender */
+    userName: string;
+    /** Timestamp of the original message */
+    originalTimestamp: number;
+  };
 }
 
 /**

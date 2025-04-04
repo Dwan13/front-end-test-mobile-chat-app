@@ -32,6 +32,9 @@ export const messages = sqliteTable("messages", {
   thumbnailUrl: text("thumbnail_url"),
   duration: integer("duration"),
   size: integer("size"),
+  isRead: integer("is_read").default(0),
+  readAt: integer("read_at"),
+  forwardedFrom: text("forwarded_from"),
 });
 
 /**

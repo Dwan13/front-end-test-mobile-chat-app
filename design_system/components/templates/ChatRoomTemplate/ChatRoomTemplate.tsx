@@ -72,6 +72,12 @@ interface ChatRoomTemplateProps {
      * @remarks Used for programmatic control of the message list
      */
     flatListRef: React.RefObject<FlatList>;
+    /** 
+     * Callback function triggered when forwarding a message
+     * @param messageId - ID of the message to forward
+     * @param targetChatId - ID of the chat to forward to
+     */
+    onForwardMessage?: (messageId: string, targetChatId: string) => void;
 }
 
 /**

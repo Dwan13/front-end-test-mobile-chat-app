@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, TextInput, ActivityIndicator } from 'react-native';
+import { TextInput, ActivityIndicator } from 'react-native';
 import { BaseTemplate } from '../BaseTemplate';
 import { colors, themes as Colors } from '@/design_system/ui/tokens';
 import { styles } from './SearchTemplate.styles';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { ThemedText, ThemedView } from '@/design_system/components/atoms';
+import { ThemedView } from '@/design_system/components/atoms';
 
 interface SearchTemplateProps {
   /** Main content of the template */

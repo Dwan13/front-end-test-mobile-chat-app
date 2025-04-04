@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, Pressable, Animated } from 'react-native';
-import { styles as createStyles} from './OptionsMenu.styles';
+import { styles as createStyles } from './OptionsMenu.styles';
 import { useOptionsMenu } from '@/hooks/useOptionsMenu';
 import { OptionButton } from '@/design_system/components/molecules/OptionButton';
 import { useTheme } from '@/context/ThemeContext';
@@ -17,6 +17,8 @@ interface OptionsMenuProps {
   onDelete: () => void;
   /** Function to be called when adding an emoji */
   onAddEmoji: () => void;
+  /** Function to be called when forwarding a message */
+  onForward?: () => void;
   /** Position of the menu */
   position?: { top: number; left: number; width: number };
 }
@@ -25,27 +27,62 @@ interface OptionsMenuProps {
  * OptionsMenu component provides a contextual menu with actions like edit, delete, and add emoji.
  * It appears at a specified position and supports theme-based styling.
  */
-export const OptionsMenu: React.FC<OptionsMenuProps> = ({ visible, onClose, onEdit, onDelete, onAddEmoji, position }) => {
+export const OptionsMenu: React.FC<OptionsMenuProps> = ({
+  visible,
+  onClose,
+  onEdit,
+  onDelete,
+  onAddEmoji,
+  onForward,
+  position
+}) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const { getAdjustedPosition } = useOptionsMenu(visible, position);
-
+  /*   const [showChatSelector, setShowChatSelector] = useState(false);
+  
+    const handleForward = async (selectedChatId: string) => {
+      console.log('entre al handleForward');
+  
+      if (onForward) {
+        try {
+          await onForward(selectedChatId);
+          onClose();
+        } catch (error) {
+          console.error('Error forwarding message:', error);
+          // TODO: Mostrar mensaje de error al usuario
+        }
+      }
+      
+      setShowChatSelector(false);
+    };
+   */
   if (!visible || !position) return null;
 
   const animatedPosition = getAdjustedPosition();
   if (!animatedPosition) return null;
 
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Animated.View style={[styles.optionsContainer, animatedPosition]}>
-          <OptionButton icon="create-outline" text="Editar" onPress={() => { onEdit(); onClose(); }} color={theme!='dark'?colors.neutral[100]:colors.primary.darker}  />
-          <OptionButton icon="happy-outline" text="Añadir Emoji" onPress={() => { onAddEmoji(); onClose(); }}  color={theme!='dark'?colors.neutral[100]:colors.primary.darker} />
-          <OptionButton icon="trash-outline" text="Eliminar" onPress={() => { onDelete(); onClose(); }} color={colors.error.dark} />
-          <OptionButton icon="close-outline" text="Cancelar" onPress={onClose} color={theme!='dark'?colors.neutral[100]:colors.primary.darker}  />
-        </Animated.View>
-      </Pressable>
-    </Modal>
+    <>
+      <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
+        <Pressable style={styles.modalOverlay} onPress={onClose}>
+          <Animated.View style={[styles.optionsContainer, animatedPosition]}>
+            {onForward && (
+              <OptionButton
+                icon="arrow-redo-outline"
+                text="Reenviar"
+                onPress={() => { onForward(); onClose(); }}
+                color={theme != 'dark' ? colors.neutral[100] : colors.primary.darker}
+              />
+            )}
+            <OptionButton icon="create-outline" text="Editar" onPress={() => { onEdit(); onClose(); }} color={theme != 'dark' ? colors.neutral[100] : colors.primary.darker} />
+            <OptionButton icon="happy-outline" text="Añadir Emoji" onPress={() => { onAddEmoji(); onClose(); }} color={theme != 'dark' ? colors.neutral[100] : colors.primary.darker} />
+            <OptionButton icon="trash-outline" text="Eliminar" onPress={() => { onDelete(); onClose(); }} color={colors.error.dark} />
+            <OptionButton icon="close-outline" text="Cancelar" onPress={onClose} color={theme != 'dark' ? colors.neutral[100] : colors.primary.darker} />
+          </Animated.View>
+        </Pressable>
+      </Modal>
+    </>
   );
 };
 

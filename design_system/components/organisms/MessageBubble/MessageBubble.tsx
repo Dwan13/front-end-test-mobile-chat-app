@@ -5,6 +5,8 @@ import { styles as createStyles } from './MessageBubble.styles';
 import { useMessageBubble } from '@/hooks/components/useMessageBubble';
 import { OptionsMenu } from '@/design_system/components/organisms/OptionsMenu';
 import EmojiSelector, { Categories } from 'react-native-emoji-selector';
+import { ChatSelector } from '@/design_system/components/organisms'; // Importar el componente selector de chats
+
 import { useTheme } from '@/context/ThemeContext';
 import { Message } from '@/types/Chat';
 import { Image } from 'react-native';
@@ -24,6 +26,8 @@ interface MessageBubbleProps {
   onRemoveReaction?: (reactionId: string, messageId: string) => void;
   /** Function to be called when editing a message */
   onEditMessage?: (messageId: string, currentText: string) => void;
+  /** Function to be called when forwarding a message */
+  onForwardMessage?: (messageId: string, targetChatId: string) => void;
 }
 
 /**
@@ -38,6 +42,7 @@ export function MessageBubble({
     onAddReaction,
     onRemoveReaction,
     onEditMessage,
+    onForwardMessage,
 }: MessageBubbleProps) {
     const { theme } = useTheme();
     const styles = createStyles(theme);
@@ -49,9 +54,12 @@ export function MessageBubble({
         showEmojiSelector,
         setShowEmojiSelector,
         handleEmojiSelected,
+        handleForward,
         handleRemoveReaction,
+        showChatSelector,
+        setShowChatSelector,
         showOptionsMenu,
-        setShowOptionsMenu
+        setShowOptionsMenu,
     } = useMessageBubble({
         message,
         isCurrentUser,
@@ -59,7 +67,8 @@ export function MessageBubble({
         onDeleteMessage,
         onAddReaction,
         onEditMessage,
-        onRemoveReaction
+        onRemoveReaction,
+        onForwardMessage
     });
 
   const bubbleRef = useRef<View>(null);
@@ -137,7 +146,8 @@ export function MessageBubble({
         onEdit={() => message.text && onEditMessage?.(message.id, message.text)}
         onDelete={() => onDeleteMessage?.(message.id)}
         onAddEmoji={() => setShowEmojiSelector(true)}
-        position={{ top: bubblePosition.y, left: bubblePosition.x, width: bubblePosition.width }} // Pass position as a prop
+        onForward={() => setShowChatSelector(true)}
+        position={{ top: bubblePosition.y, left: bubblePosition.x, width: bubblePosition.width }}
       />
 
       <Modal
@@ -167,6 +177,13 @@ export function MessageBubble({
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* Chat Selector Modal */}
+      <ChatSelector
+        visible={showChatSelector}
+        onClose={() => setShowChatSelector(false)}
+        onChatSelected={handleForward}
+      />
     </>
   );
 }

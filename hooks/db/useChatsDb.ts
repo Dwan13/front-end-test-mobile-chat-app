@@ -74,27 +74,33 @@ export function useChatsDb(currentUserId: string | null) {
             .where(eq(messages.chatId, chatId))
             .orderBy(messages.timestamp);
 
-          // Get reactions for all messages
-          const reactionsData = await db
-            .select()
-            .from(messageReactions)
-            .where(
-              or(
-                ...messagesData.map(m => eq(messageReactions.messageId, m.id))
-              )
-            );
-
-          // Group reactions by message
-          const messageReactionsMap = reactionsData.reduce((acc, reaction) => {
-            if (!acc[reaction.messageId]) {
-              acc[reaction.messageId] = [];
+          // Obtener mensajes y reacciones en una sola consulta
+          const messagesWithReactions = await db
+            .select({
+              message: messages,
+              reaction: messageReactions
+            })
+            .from(messages)
+            .leftJoin(
+              messageReactions,
+              eq(messages.id, messageReactions.messageId)
+            )
+            .where(eq(messages.chatId, chatId))
+            .orderBy(messages.timestamp);
+          
+          // Agrupar reacciones por mensaje
+          const messageReactionsMap = messagesWithReactions.reduce((acc, { message, reaction }) => {
+            if (!acc[message.id]) {
+              acc[message.id] = [];
             }
-            acc[reaction.messageId].push({
-              id: reaction.id,
-              userId: reaction.userId,
-              emoji: reaction.emoji,
-              createdAt: reaction.createdAt,
-            });
+            if (reaction) {
+              acc[message.id].push({
+                id: reaction.id,
+                userId: reaction.userId,
+                emoji: reaction.emoji,
+                createdAt: reaction.createdAt,
+              });
+            }
             return acc;
           }, {} as Record<string, MessageReaction[]>);
 
@@ -179,7 +185,17 @@ export function useChatsDb(currentUserId: string | null) {
    * @param senderId - ID of the sender
    * @returns Boolean indicating success
    */
-  const sendMessage = useCallback(async (chatId: string, text: string, senderId: string, imageUri?: string) => {
+  const sendMessage = useCallback(async (
+    chatId: string, 
+    text: string, 
+    senderId: string, 
+    imageUri?: string,
+    forwardedFrom?: {
+        userId: string;
+        userName: string;
+        originalTimestamp: number;
+    }
+) => {
     if (!text.trim() && !imageUri) return false;
 
     try {
@@ -187,22 +203,25 @@ export function useChatsDb(currentUserId: string | null) {
         const timestamp = Date.now();
 
         const messageValues = {
-            id: messageId,
-            chatId,
-            senderId,
-            timestamp,
-            text: text || null,
-            hasMultimedia: !!imageUri,
-            multimediaType: imageUri ? 'image' : null,
-            multimediaUrl: imageUri || null,
-            thumbnailUrl: imageUri ? `${imageUri}?thumb` : null,
-            duration: imageUri ? 0 : null, // Add duration with default value
-            size: imageUri ? 0 : null,     // Add size with default value
-        };
+          id: messageId,
+          chatId,
+          senderId,
+          timestamp,
+          text: text || null,
+          hasMultimedia: imageUri ? 1 : 0, // Convert boolean to number
+          multimediaType: imageUri ? 'image' : null,
+          multimediaUrl: imageUri || null,
+          thumbnailUrl: imageUri ? `${imageUri}?thumb` : null,
+          duration: imageUri ? 0 : null,
+          size: imageUri ? 0 : null,
+          isRead: 0, // Convert boolean to number (0 for false, 1 for true)
+          readAt: null,
+          forwardedFrom: forwardedFrom ? JSON.stringify(forwardedFrom) : null
+      };
 
         await db.insert(messages).values({
             ...messageValues,
-            hasMultimedia: imageUri ? 1 : 0, // Convert boolean to number for SQLite
+            hasMultimedia: imageUri ? 1 : 0,
         });
 
         const newMessage: Message = {
@@ -215,6 +234,8 @@ export function useChatsDb(currentUserId: string | null) {
             multimediaType: imageUri ? 'image' : undefined,
             multimediaUrl: imageUri || undefined,
             thumbnailUrl: imageUri ? `${imageUri}?thumb` : undefined,
+            isRead: false,
+            forwardedFrom: forwardedFrom
         };
 
         setUserChats(prevChats =>
@@ -235,6 +256,7 @@ export function useChatsDb(currentUserId: string | null) {
         return false;
     }
 }, []);
+
 
   /**
    * Deletes a chat for a specific user
@@ -485,6 +507,76 @@ export function useChatsDb(currentUserId: string | null) {
     }
   }, [currentUserId]);
 
+  // Add new function to mark messages as read
+const markMessagesAsRead = useCallback(async (chatId: string, userId: string) => {
+  try {
+      const readAt = Date.now();
+      
+      // Update messages in database
+      await db.update(messages)
+          .set({ isRead: 1, readAt })
+          .where(
+              and(
+                  eq(messages.chatId, chatId),
+                  eq(messages.senderId, userId),
+                  eq(messages.isRead, 0)
+              )
+          );
+
+      // Update local state
+      setUserChats(prevChats =>
+          prevChats.map(chat =>
+              chat.id === chatId
+                  ? {
+                      ...chat,
+                      messages: chat.messages.map(msg => 
+                          msg.senderId === userId && !msg.isRead
+                              ? { ...msg, isRead: true, readAt }
+                              : msg
+                      )
+                  }
+                  : chat
+          )
+      );
+
+      return true;
+  } catch (error) {
+      console.error('Error marking messages as read:', error);
+      return false;
+  }
+}, []);
+
+// Add new function to forward messages
+const forwardMessage = useCallback(async (messageId: string, targetChatId: string, senderId: string) => {
+  try {
+      // Get the original message
+      const [originalMessage] = await db
+          .select()
+          .from(messages)
+          .where(eq(messages.id, messageId));
+
+      if (!originalMessage) return false;
+
+      // Forward the message
+      const success = await sendMessage(
+          targetChatId,
+          originalMessage.text || '',
+          senderId,
+          originalMessage.multimediaUrl || undefined,
+          {
+              userId: originalMessage.senderId,
+              userName: 'Original Sender', // You might want to fetch the actual name
+              originalTimestamp: originalMessage.timestamp
+          }
+      );
+
+      return success;
+  } catch (error) {
+      console.error('Error forwarding message:', error);
+      return false;
+  }
+}, [sendMessage]);
+
   return {
     chats: userChats,
     createChat,
@@ -495,6 +587,8 @@ export function useChatsDb(currentUserId: string | null) {
     addReaction,
     removeReaction,
     editMessage,
+    markMessagesAsRead,
+    forwardMessage,
     loading,
   };
 }
