@@ -21,4 +21,14 @@ export const styles = (theme: Theme) => StyleSheet.create({
     marginBottom: 20,
     color: theme === 'dark' ? '#FFF' : '#000',
   },
+  chatItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: theme === 'dark' ? '#444' : '#EEE',
+  },
+  chatName: {
+    fontSize: 16,
+    color: theme === 'dark' ? '#FFF' : '#000',
+  },
+
 });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getBubbleColors } from '@/design_system/components/organisms/MessageBubble/MessageBubble.styles';
 import { Message } from '@/types/Chat';
+import { getUserReaction, hasUserReacted } from '@/utils/chatUtils';
 
 interface UseMessageBubbleProps {
   message: Message;
@@ -23,76 +24,54 @@ interface UseMessageBubbleProps {
  * @param userId - ID of the current user
  * @returns Object containing styling, handlers, and state for message bubble
  */
-export function useMessageBubble({ 
-  message, 
+export function useMessageBubble({
+  message,
   isCurrentUser,
   userId,
   onAddReaction,
   onRemoveReaction,
-  onForwardMessage
+  onForwardMessage,
 }: UseMessageBubbleProps) {
   const [showEmojiSelector, setShowEmojiSelector] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [showChatSelector, setShowChatSelector] = useState(false);
+
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const bubbleColors = getBubbleColors(isDark, isCurrentUser);
 
-  /**
-   * Handles long press event on message bubble
-   */
   const handleLongPress = () => {
-    if (isCurrentUser) {
-      setShowOptionsMenu(true);
-    } else {
-      setShowEmojiSelector(true);
-    }
+    isCurrentUser ? setShowOptionsMenu(true) : setShowEmojiSelector(true);
   };
 
-  /**
-   * Handles emoji selection for reactions
-   * @param emoji - Selected emoji string
-   */
   const handleEmojiSelected = (emoji: string) => {
     if (!userId) return;
 
-    const hasUserReaction = message.reactions.some(reaction => reaction.userId === userId);
-    
-    if (hasUserReaction) {
-      const existingReaction = message.reactions.find(reaction => reaction.userId === userId);
-      if (existingReaction) {
-        handleRemoveReaction(existingReaction.id);
-      }
+    if (hasUserReacted(message, userId)) {
+      const existingReaction = getUserReaction(message, userId);
+      if (existingReaction) handleRemoveReaction(existingReaction.id);
     }
-    
+
     onAddReaction?.(message.id, emoji);
     setShowEmojiSelector(false);
   };
 
   const handleForward = async (targetChatId: string) => {
     try {
-      if (onForwardMessage) {
-        await onForwardMessage(message.id, targetChatId);
-        setShowChatSelector(false);
-        // Optionally add success feedback here
-      }
+      await onForwardMessage?.(message.id, targetChatId);
+      setShowChatSelector(false);
     } catch (error) {
       console.error('Error forwarding message:', error);
-      // TODO: Add error handling or user feedback
     }
   };
 
-  /**
-   * Handles removal of a reaction
-   * @param reactionId - ID of the reaction to remove
-   */
   const handleRemoveReaction = (reactionId: string) => {
     onRemoveReaction?.(reactionId, message.id);
   };
 
-  return { 
-    isDark, 
-    bubbleColors, 
+  return {
+    isDark,
+    bubbleColors,
     handleLongPress,
     showEmojiSelector,
     setShowEmojiSelector,
@@ -102,6 +81,6 @@ export function useMessageBubble({
     showChatSelector,
     setShowChatSelector,
     showOptionsMenu,
-    setShowOptionsMenu
+    setShowOptionsMenu,
   };
 }

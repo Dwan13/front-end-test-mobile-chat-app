@@ -556,8 +556,7 @@ const forwardMessage = useCallback(async (messageId: string, targetChatId: strin
           .where(eq(messages.id, messageId));
 
       if (!originalMessage) return false;
-
-      // Forward the message
+            
       const success = await sendMessage(
           targetChatId,
           originalMessage.text || '',

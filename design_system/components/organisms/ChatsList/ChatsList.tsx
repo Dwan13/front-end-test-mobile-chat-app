@@ -76,7 +76,6 @@ export const ChatsList: React.FC<ChatsListProps> = ({
             chat={item}
             currentUserId={currentUserId}
             users={users}
-            onLongPress={() => onDeleteChat(item.id)}
           />
         </Swipeable>
       )}

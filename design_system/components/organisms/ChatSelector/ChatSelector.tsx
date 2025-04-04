@@ -5,6 +5,7 @@ import { useAppContext } from '@/context/AppContext';
 import { styles as createStyles } from './ChatSelector.styles';
 import { ThemedText, ThemedView } from '../../atoms';
 import { ChatListItem } from '../ChatListItem';
+import { Chat } from '@/types/Chat';
 
 interface ChatSelectorProps {
   visible: boolean;
@@ -20,7 +21,9 @@ export const ChatSelector: React.FC<ChatSelectorProps> = ({
   const { theme } = useTheme();
   const { chats, users, currentUser } = useAppContext();
   const styles = createStyles(theme);
-
+  const handleTest = (item: Chat) => {
+    onChatSelected(item.id);
+  }
   return (
     <Modal
       transparent
@@ -28,23 +31,19 @@ export const ChatSelector: React.FC<ChatSelectorProps> = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable style={styles.overlay} >
         <ThemedView style={styles.container}>
           <ThemedText style={styles.title}>Select chat</ThemedText>
           <FlatList
             data={chats}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <Pressable 
-                onPress={() => onChatSelected(item.id)}
-              >
                 <ChatListItem
                   chat={item}
                   currentUserId={currentUser?.id || ''}
                   users={users}
-                  onLongPress={() => {}}
+                  onPress={() => handleTest(item)}
                 />
-              </Pressable>
             )}
           />
         </ThemedView>

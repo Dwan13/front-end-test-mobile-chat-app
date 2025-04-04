@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -7,7 +7,7 @@ import {
     Pressable,
     View,
     TouchableOpacity,
-    Image // Add this import
+    Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
@@ -18,6 +18,15 @@ import { createStyles } from './ChatRoomTemplate.styles';
 import { useTheme } from '@/context/ThemeContext';
 import { colors, themes } from '@/design_system/ui/tokens';
 import { useChatInput } from '@/hooks/useChatInput';
+
+const KEYBOARD_OFFSET = Platform.OS === 'ios' ? 90 : 0;
+
+const EmptyMessageComponent = () => (
+    <ThemedView style={{ padding: 16, alignItems: 'center' }}>
+        <ThemedText>No messages yet. Say hello!</ThemedText>
+    </ThemedView>
+);
+
 
 interface ChatRoomTemplateProps {
     /** Name of the chat room displayed in the header */
@@ -100,6 +109,7 @@ interface ChatRoomTemplateProps {
  * - Handles image selection and sending
  * - Provides a customizable header with back navigation
  */
+
 export const ChatRoomTemplate: React.FC<ChatRoomTemplateProps> = ({
     chatName,
     participantAvatar,
@@ -115,12 +125,13 @@ export const ChatRoomTemplate: React.FC<ChatRoomTemplateProps> = ({
     const { theme } = useTheme();
     const styles = createStyles(theme);
     const { selectedImage, pickImageAsync, handleSend, removeImage } = useChatInput(onSendMessage);
+    const canSend = !!messageText.trim() || !!selectedImage;
 
     return (
         <KeyboardAvoidingView 
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            keyboardVerticalOffset={KEYBOARD_OFFSET}
         >
             <StatusBar style="auto" />
             <Stack.Screen
@@ -129,7 +140,6 @@ export const ChatRoomTemplate: React.FC<ChatRoomTemplateProps> = ({
                         backgroundColor: theme === 'light' ? themes.light.background.main : themes.dark.background.main,
                     },
                     headerTintColor: theme === 'light' ? themes.light.text.contrast : themes.dark.text.contrast,
-
                     headerTitle: () => (
                         <View style={styles.headerContainer}>
                             {participantAvatar && (
@@ -156,20 +166,13 @@ export const ChatRoomTemplate: React.FC<ChatRoomTemplateProps> = ({
                 ref={flatListRef}
                 data={messages}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }: { item: any }) => renderMessage(item) as React.ReactElement}
+                renderItem={({ item }) => renderMessage(item) as React.ReactElement}
                 contentContainerStyle={styles.messagesContainer}
-                ListEmptyComponent={() => (
-                    <ThemedView style={styles.emptyContainer}>
-                        <ThemedText>No messages yet. Say hello!</ThemedText>
-                    </ThemedView>
-                )}
+                ListEmptyComponent={EmptyMessageComponent}
             />
 
             <ThemedView style={[styles.inputContainer, Platform.OS === 'ios' && styles.iosInputContainer]}>
-                <TouchableOpacity
-                    style={styles.mediaButton}
-                    onPress={pickImageAsync}
-                >
+                <TouchableOpacity style={styles.mediaButton} onPress={pickImageAsync}>
                     <IconSymbol name="photo" size={24} color={theme === 'light' ? themes.light.text.black : colors.neutral[100]} />
                 </TouchableOpacity>
 
@@ -180,10 +183,7 @@ export const ChatRoomTemplate: React.FC<ChatRoomTemplateProps> = ({
                             style={styles.previewImage}
                             resizeMode="cover"
                         />
-                        <TouchableOpacity
-                            style={styles.removeMediaButton}
-                            onPress={removeImage}
-                        >
+                        <TouchableOpacity style={styles.removeMediaButton} onPress={removeImage}>
                             <IconSymbol name="xmark" size={16} color={colors.neutral[100]} />
                         </TouchableOpacity>
                     </View>
@@ -195,12 +195,14 @@ export const ChatRoomTemplate: React.FC<ChatRoomTemplateProps> = ({
                     onChangeText={onMessageChange}
                     placeholder="Type a message..."
                     multiline
+                    accessible
+                    accessibilityLabel="Message input field"
                 />
 
                 <Pressable
-                    style={[styles.sendButton, (!messageText.trim() && !selectedImage) && styles.disabledButton]}
+                    style={[styles.sendButton, !canSend && styles.disabledButton]}
                     onPress={handleSend}
-                    disabled={!messageText.trim() && !selectedImage}
+                    disabled={!canSend}
                 >
                     <IconSymbol
                         name={isEditing ? "pencil.circle.fill" : "arrow.up.circle.fill"}

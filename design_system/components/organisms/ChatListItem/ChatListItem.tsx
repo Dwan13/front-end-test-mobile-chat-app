@@ -16,7 +16,7 @@ interface ChatListItemProps {
   /** List of users in the chat */
   users: User[];
   /** Function to be called on long press */
-  onLongPress?: () => void;
+  onPress?: () => void;
 }
 
 /**
@@ -24,7 +24,7 @@ interface ChatListItemProps {
  * It includes an avatar, chat name, last message, and timestamp.
  * Supports press animations and differentiates messages from the current user.
  */
-export function ChatListItem({ chat, currentUserId, users, onLongPress }: ChatListItemProps) {
+export function ChatListItem({ chat, currentUserId, users, onPress }: ChatListItemProps) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const {
@@ -37,12 +37,11 @@ export function ChatListItem({ chat, currentUserId, users, onLongPress }: ChatLi
     handlePress,
     timeString,
     isCurrentUserLastSender,
-  } = useChatListItem({ chat, currentUserId, users });
+  } = useChatListItem({ chat, currentUserId, users, onPress });
 
   return (
     <Pressable 
       onPress={handlePress}
-      //onLongPress={onLongPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >

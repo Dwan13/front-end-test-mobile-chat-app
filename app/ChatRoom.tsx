@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { FlatList } from 'react-native';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { FlatList, InteractionManager } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAppContext } from '@/context/AppContext';
 import { ThemedText, ThemedView } from '@/design_system/components/atoms';
@@ -11,7 +11,7 @@ import { ChatRoomTemplate } from '@/design_system/components/templates';
  */
 export default function ChatRoomScreen() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
-  const { currentUser, users, chats, sendMessage, deleteMessage, addReaction, removeReaction, editMessage } = useAppContext();
+  const { currentUser, users, chats, sendMessage, deleteMessage, addReaction, removeReaction, editMessage, forwardMessage } = useAppContext();
   const [messageText, setMessageText] = useState('');
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -23,24 +23,27 @@ export default function ChatRoomScreen() {
     .map(id => users.find(user => user.id === id))
     .filter(Boolean) || [];
 
-  const chatName = chatParticipants.length === 1
-    ? chatParticipants[0]?.name
-    : `${chatParticipants[0]?.name || 'Unknown'} & ${chatParticipants.length - 1} other${chatParticipants.length > 1 ? 's' : ''}`;
+    const names = chatParticipants.slice(0, 2).map(u => u?.name).filter(Boolean);
+    const extraCount = chatParticipants.length - names.length;
+    const chatName = `${names.join(', ')}${extraCount > 0 ? ` +${extraCount}` : ''}`;
 
   /**
    * Handles sending or editing a message
    */
-  const handleSendMessage = (imageUri?: string) => {
+  const handleSendMessage = async (imageUri?: string) => {
     if ((messageText.trim() || imageUri) && currentUser && chat) {
+      try {
         if (editingMessageId) {
-            // If editing, update the message
-            editMessage?.(editingMessageId, messageText.trim());
-            setEditingMessageId(null);
+          await editMessage?.(editingMessageId, messageText.trim());
         } else {
-            // Otherwise, send a new message
-            sendMessage(chat.id, messageText.trim(), currentUser.id, imageUri);
+          await sendMessage(chat.id, messageText.trim(), currentUser.id, imageUri);
         }
         setMessageText('');
+        setEditingMessageId(null);
+      } catch (err) {
+        console.error("Error sending message:", err);
+      }
+      
     }
 };
 
@@ -86,11 +89,22 @@ export default function ChatRoomScreen() {
     }
   };
 
+  const handleForwardMessage = async (messageId: string, targetChatId: string) => {
+    try {
+      if (forwardMessage) {        
+        await forwardMessage(messageId, targetChatId, currentUser?.id || '');
+      }
+    } catch (error) {
+      console.error('Error forwarding message:', error);
+    }
+  };
+  
+
   useEffect(() => {
     if (chat?.messages.length && flatListRef.current) {
-      setTimeout(() => {
+      InteractionManager.runAfterInteractions(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      });
     }
   }, [chat?.messages.length]);
 
@@ -102,8 +116,10 @@ export default function ChatRoomScreen() {
     );
   }
 
-  const sortedMessages = chat?.messages.sort((a, b) => a.timestamp - b.timestamp) || [];
-
+  const sortedMessages = useMemo(() => {
+    return [...(chat?.messages || [])].sort((a, b) => a.timestamp - b.timestamp);
+  }, [chat?.messages]);
+  
   return (
       <ChatRoomTemplate
         chatName={chatName || 'Chat'}
@@ -125,6 +141,7 @@ export default function ChatRoomScreen() {
             onAddReaction={handleAddReaction}
             onRemoveReaction={handleRemoveReaction}
             onEditMessage={handleEditMessage}
+            onForwardMessage={handleForwardMessage}
             userId={currentUser.id}
           />
         )}

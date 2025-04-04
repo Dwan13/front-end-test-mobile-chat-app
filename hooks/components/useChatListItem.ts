@@ -15,6 +15,7 @@ interface UseChatListItemProps {
   chat: Chat;
   currentUserId: string;
   users: User[];
+  onPress?: () => void;
 }
 
 /**
@@ -24,7 +25,7 @@ interface UseChatListItemProps {
  * @param users - List of all users
  * @returns Object containing animation values, handlers, and derived chat data
  */
-export function useChatListItem({ chat, currentUserId, users }: UseChatListItemProps) {
+export function useChatListItem({ chat, currentUserId, users, onPress }: UseChatListItemProps) {
   const navigation = useNavigation<NavigationProps>();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
@@ -86,6 +87,7 @@ export function useChatListItem({ chat, currentUserId, users }: UseChatListItemP
    * Handles navigation to the chat room
    */
   const handlePress = () => {
+    if (onPress) onPress();
     navigation.navigate('ChatRoom', { chatId: chat.id });
   };
 

@@ -39,24 +39,7 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const { getAdjustedPosition } = useOptionsMenu(visible, position);
-  /*   const [showChatSelector, setShowChatSelector] = useState(false);
   
-    const handleForward = async (selectedChatId: string) => {
-      console.log('entre al handleForward');
-  
-      if (onForward) {
-        try {
-          await onForward(selectedChatId);
-          onClose();
-        } catch (error) {
-          console.error('Error forwarding message:', error);
-          // TODO: Mostrar mensaje de error al usuario
-        }
-      }
-      
-      setShowChatSelector(false);
-    };
-   */
   if (!visible || !position) return null;
 
   const animatedPosition = getAdjustedPosition();

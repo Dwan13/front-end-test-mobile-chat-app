@@ -1,15 +1,14 @@
 import React, { useRef, useState } from 'react';
-import { View, TouchableWithoutFeedback, Modal } from 'react-native';
+import { View, Modal, Pressable, Image } from 'react-native';
 import { ThemedText } from '@/design_system/components/atoms/ThemedText';
 import { styles as createStyles } from './MessageBubble.styles';
 import { useMessageBubble } from '@/hooks/components/useMessageBubble';
 import { OptionsMenu } from '@/design_system/components/organisms/OptionsMenu';
 import EmojiSelector, { Categories } from 'react-native-emoji-selector';
-import { ChatSelector } from '@/design_system/components/organisms'; // Importar el componente selector de chats
-
+import { ChatSelector } from '@/design_system/components/organisms';
 import { useTheme } from '@/context/ThemeContext';
 import { Message } from '@/types/Chat';
-import { Image } from 'react-native';
+
 
 interface MessageBubbleProps {
   /** Message data to be displayed */
@@ -34,49 +33,48 @@ interface MessageBubbleProps {
  * MessageBubble component displays a chat message with support for reactions, editing, and deletion.
  * It includes options for long-press actions and an emoji selector for reactions.
  */
+
+const formatTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
 export function MessageBubble({
+  message,
+  isCurrentUser,
+  userId,
+  onDeleteMessage,
+  onAddReaction,
+  onRemoveReaction,
+  onEditMessage,
+  onForwardMessage,
+}: MessageBubbleProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  const bubbleRef = useRef<View>(null);
+  const [bubblePosition, setBubblePosition] = useState({ x: 0, y: 0, width: 0 });
+
+  const {
+    isDark,
+    bubbleColors,
+    handleLongPress,
+    showEmojiSelector,
+    setShowEmojiSelector,
+    handleEmojiSelected,
+    handleForward,
+    handleRemoveReaction,
+    showChatSelector,
+    setShowChatSelector,
+    showOptionsMenu,
+    setShowOptionsMenu,
+  } = useMessageBubble({
     message,
     isCurrentUser,
     userId,
     onDeleteMessage,
     onAddReaction,
-    onRemoveReaction,
     onEditMessage,
+    onRemoveReaction,
     onForwardMessage,
-}: MessageBubbleProps) {
-    const { theme } = useTheme();
-    const styles = createStyles(theme);
-    
-    const {
-        isDark,
-        bubbleColors,
-        handleLongPress,
-        showEmojiSelector,
-        setShowEmojiSelector,
-        handleEmojiSelected,
-        handleForward,
-        handleRemoveReaction,
-        showChatSelector,
-        setShowChatSelector,
-        showOptionsMenu,
-        setShowOptionsMenu,
-    } = useMessageBubble({
-        message,
-        isCurrentUser,
-        userId,
-        onDeleteMessage,
-        onAddReaction,
-        onEditMessage,
-        onRemoveReaction,
-        onForwardMessage
-    });
-
-  const bubbleRef = useRef<View>(null);
-  const [bubblePosition, setBubblePosition] = useState({ x: 0, y: 0, width: 0 });
-
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  });
 
   const handleLayout = () => {
     bubbleRef.current?.measure((_x, _y, width, _height, pageX, pageY) => {
@@ -84,61 +82,81 @@ export function MessageBubble({
     });
   };
 
+  const renderMultimedia = () => {
+    if (message.multimediaUrl && message.multimediaType === 'image') {
+      return (
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: message.multimediaUrl }}
+            style={styles.messageImage}
+            resizeMode="cover"
+            onError={() => console.warn('Image failed to load')}
+          />
+        </View>
+      );
+    }
+    return null;
+  };
+
+  const renderReactions = () => {
+    if (!message.reactions || message.reactions.length === 0) return null;
+    return (
+      <View
+        style={[
+          styles.reactionsContainer,
+          isCurrentUser ? styles.reactionsRight : styles.reactionsLeft,
+        ]}
+      >
+        {message.reactions.map((reaction) => (
+          <Pressable key={reaction.id} onPress={() => handleRemoveReaction(reaction.id)}>
+            <View style={styles.reaction}>
+              <ThemedText style={styles.reactionText}>{reaction.emoji}</ThemedText>
+            </View>
+          </Pressable>
+        ))}
+      </View>
+    );
+  };
+
   return (
     <>
-      <TouchableWithoutFeedback onLongPress={handleLongPress}>
+      <Pressable onLongPress={handleLongPress}>
         <View
           testID="message-bubble-container"
           ref={bubbleRef}
           onLayout={handleLayout}
-          style={[styles.container, isCurrentUser ? styles.selfContainer : styles.otherContainer]}
+          style={[
+            styles.container,
+            isCurrentUser ? styles.selfContainer : styles.otherContainer,
+          ]}
         >
-          <View style={[
-            styles.bubble,
-            isCurrentUser ? styles.selfBubble : styles.otherBubble,
-            { backgroundColor: bubbleColors.background }
-          ]}>
-            {message.multimediaUrl && message.multimediaType === 'image' && (
-              <View style={styles.imageContainer}>
-                <Image
-                  source={{ uri: message.multimediaUrl }}
-                  style={styles.messageImage}
-                  resizeMode="cover"
-                />
-              </View>
-            )}
-            
+          <View
+            style={[
+              styles.bubble,
+              isCurrentUser ? styles.selfBubble : styles.otherBubble,
+              { backgroundColor: bubbleColors.background },
+            ]}
+          >
+            {renderMultimedia()}
             {message.text && (
-              <ThemedText style={[styles.messageText, isCurrentUser && !isDark && styles.selfMessageText]}>
+              <ThemedText
+                style={[
+                  styles.messageText,
+                  isCurrentUser && !isDark && styles.selfMessageText,
+                ]}
+              >
                 {message.text}
               </ThemedText>
             )}
-            
             <View style={styles.timeContainer}>
               <ThemedText style={styles.timeText}>
                 {formatTime(message.timestamp)}
               </ThemedText>
             </View>
-            {message.reactions && message.reactions.length > 0 && (
-              <View style={[
-                styles.reactionsContainer,
-                isCurrentUser ? styles.reactionsRight : styles.reactionsLeft
-              ]}>
-                {message.reactions.map((reaction) => (
-                  <TouchableWithoutFeedback
-                    key={reaction.id}
-                    onPress={() => handleRemoveReaction(reaction.id)}
-                  >
-                    <View style={styles.reaction}>
-                      <ThemedText style={styles.reactionText}>{reaction.emoji}</ThemedText>
-                    </View>
-                  </TouchableWithoutFeedback>
-                ))}
-              </View>
-            )}
+            {renderReactions()}
           </View>
         </View>
-      </TouchableWithoutFeedback>
+      </Pressable>
 
       <OptionsMenu
         visible={showOptionsMenu}
@@ -147,38 +165,39 @@ export function MessageBubble({
         onDelete={() => onDeleteMessage?.(message.id)}
         onAddEmoji={() => setShowEmojiSelector(true)}
         onForward={() => setShowChatSelector(true)}
-        position={{ top: bubblePosition.y, left: bubblePosition.x, width: bubblePosition.width }}
+        position={{
+          top: bubblePosition.y,
+          left: bubblePosition.x,
+          width: bubblePosition.width,
+        }}
       />
 
       <Modal
         visible={showEmojiSelector}
-        transparent={true}
+        transparent
         animationType="slide"
         onRequestClose={() => setShowEmojiSelector(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setShowEmojiSelector(false)}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.emojiSelectorContainer}>
-              <View style={styles.emojiSelectorHeader}>
-                <ThemedText darkColor='#000000'>Select Reaction</ThemedText>
-              </View>
-              <View style={{ height: 300 }}>
-                <EmojiSelector
-                  onEmojiSelected={handleEmojiSelected}
-                  showSearchBar={false}
-                  showHistory={false}
-                  showTabs
-                  columns={8}
-                  category={Categories.emotion}
-                  showSectionTitles={false}
-                />
-              </View>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowEmojiSelector(false)}>
+          <View style={styles.emojiSelectorContainer}>
+            <View style={styles.emojiSelectorHeader}>
+              <ThemedText darkColor="#000000">Select Reaction</ThemedText>
+            </View>
+            <View style={{ height: 300 }}>
+              <EmojiSelector
+                onEmojiSelected={handleEmojiSelected}
+                showSearchBar={false}
+                showHistory={false}
+                showTabs
+                columns={8}
+                category={Categories.emotion}
+                showSectionTitles={false}
+              />
             </View>
           </View>
-        </TouchableWithoutFeedback>
+        </Pressable>
       </Modal>
 
-      {/* Chat Selector Modal */}
       <ChatSelector
         visible={showChatSelector}
         onClose={() => setShowChatSelector(false)}
