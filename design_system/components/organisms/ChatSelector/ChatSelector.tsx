@@ -1,11 +1,10 @@
 import React from 'react';
-import { Modal, FlatList, Pressable, Text } from 'react-native';
+import { Modal, FlatList, Pressable } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useAppContext } from '@/context/AppContext';
 import { styles as createStyles } from './ChatSelector.styles';
-import { ThemedText, ThemedView } from '../../atoms';
-import { ChatListItem } from '../ChatListItem';
-import { Chat } from '@/types/Chat';
+import { ThemedText, ThemedView } from '@/design_system/components/atoms';
+import { ChatListItem } from '@/design_system/components/organisms';
 
 interface ChatSelectorProps {
   visible: boolean;
@@ -21,9 +20,6 @@ export const ChatSelector: React.FC<ChatSelectorProps> = ({
   const { theme } = useTheme();
   const { chats, users, currentUser } = useAppContext();
   const styles = createStyles(theme);
-  const handleTest = (item: Chat) => {
-    onChatSelected(item.id);
-  }
   return (
     <Modal
       transparent
@@ -42,7 +38,7 @@ export const ChatSelector: React.FC<ChatSelectorProps> = ({
                   chat={item}
                   currentUserId={currentUser?.id || ''}
                   users={users}
-                  onPress={() => handleTest(item)}
+                  onPress={() => onChatSelected(item.id)}
                 />
             )}
           />
